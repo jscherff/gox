@@ -12,17 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log
-
-import (
-	`log`
-)
-
-const (
-        LUTC = log.LUTC
-        Ldate = log.Ldate
-        Ltime = log.Ltime
-        Llongfile = log.Llongfile
-        Lshortfile =log.Lshortfile
-        LstdFlags = log.LstdFlags
-)
+package gox

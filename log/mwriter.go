@@ -19,7 +19,7 @@ import (
 	`log`
 	`os`
 	`sync`
-	`github.com/jscherff/gox`
+	`github.com/jscherff/goutil`
 )
 
 type MWriter struct {
@@ -37,7 +37,7 @@ func NewMWriter(stdout, stderr bool, files ...string) *MWriter {
 	var f []*os.File
 
 	for _, fn := range files {
-		if fh, err := gox.MkdirOpen(fn); err != nil {
+		if fh, err := goutil.MkdirOpen(fn); err != nil {
 			log.Println(err)
 		} else {
 			f = append(f, fh)
@@ -60,7 +60,7 @@ func NewMWriter(stdout, stderr bool, files ...string) *MWriter {
 func (this *MWriter) AddFile(f string) (err error) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
-	if fh, err := gox.MkdirOpen(f); err == nil {
+	if fh, err := goutil.MkdirOpen(f); err == nil {
 		this.files = append(this.files, fh)
 		this.refresh()
 	}

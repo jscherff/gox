@@ -21,6 +21,15 @@ import (
 	`sync`
 )
 
+var LoggerFlags = map[string]int {
+	`utc`:		log.LUTC,
+	`date`:		log.Ldate,
+	`time`:		log.Ltime,
+	`longfile`:	log.Llongfile,
+	`shortfile`:	log.Lshortfile,
+	`standard`:	log.LstdFlags,
+}
+
 type MLogger struct {
 	*log.Logger
 	out	*MWriter
