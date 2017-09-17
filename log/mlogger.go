@@ -17,80 +17,45 @@ package log
 import (
 	`io`
 	`log`
-	`os`
+	`strings`
 	`sync`
-	`github.com/jscherff/gox`
 )
 
-type MultiLogger struct {
+type MLogger struct {
 	*log.Logger
-	writers	[]io.Writer
-	files	[]*os.File
-	stdout	bool
-	stderr	bool
-	buf		[]byte
-	out		io.Writer
-	mu		sync.Mutex
+	out	*MWriter
+	buf	[]byte
+	mu	sync.Mutex
 }
 
-func NewMultiLogger(prefix string, flags int, stdout, stderr bool, files ...string) *MultiLogger {
+func NewMLogger(prefix string, flags int, stdout, stderr bool, files ...string) *MLogger {
 
-	var f []*os.File
-	
-	for _, fn := range files {
-		if fh, err := gox.MkdirOpen(fn); err != nil {
-			log.Println(err)
-		} else {
-			f = append(f, fh)
-		}
-	}
-	
-	this := new(MultiLogger)
-	
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	
-	this.files = f
-	this.stdout = stdout
-	this.stderr = stderr
-	this.SetPrefix(prefix)
-	this.SetFlags(flags)
-
-	return this
+	mw := NewMWriter(stdout, stderr, files...)
+	prefix = strings.TrimSpace(prefix) + ` `
+	return &MLogger{Logger: log.New(mw, prefix, flags), out: mw}
 }
 
-func (this *MultiLogger) AddFile(fn string) (err error) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	if fh, err := gox.MkdirOpen(fn); err == nil {
-		this.files = append(this.files, fh)
-		this.refreshWriters()
-	}
-	return err
+func (this *MLogger) AddFile(f string) error {
+	return this.out.AddFile(f)
 }
 
-func (this *MultiLogger) AddWriter(writer io.Writer) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	this.writers = append(this.writers, writer)
-	this.refreshWriters()
+func (this *MLogger) AddWriter(w io.Writer) {
+	this.out.AddWriter(w)
 }
 
-func (this *MultiLogger) SetStdout(opt bool) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	this.stdout = opt
-	this.refreshWriters()
+func (this *MLogger) SetStdout(b bool) {
+	this.out.SetStdout(b)
 }
 
-func (this *MultiLogger) SetStderr(opt bool) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	this.stderr = opt
-	this.refreshWriters()
+func (this *MLogger) SetStderr(b bool) {
+	this.out.SetStderr(b)
 }
 
-func (this *MultiLogger) Write(b []byte) (n int, err error) {
+func (this *MLogger) SetPrefix(p string) {
+	this.Logger.SetPrefix(strings.TrimSpace(p) + ` `)
+}
+
+func (this *MLogger) Write(b []byte) (n int, err error) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
 	this.buf = this.buf[:0]
@@ -101,22 +66,6 @@ func (this *MultiLogger) Write(b []byte) (n int, err error) {
 	return this.out.Write(this.buf)
 }
 
-func (this *MultiLogger) refreshWriters() {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	var writers []io.Writer
-	if this.stdout {
-		writers = append(writers, os.Stdout)
-	}
-	if this.stderr {
-		writers = append(writers, os.Stderr)
-	}
-	for _, w := range this.writers {
-		writers = append(writers, w)
-	}
-	for _, f := range this.files {
-		writers = append(writers, f)
-	}
-	this.out = io.MultiWriter(writers...)
-	this.SetOutput(this.out)
+func (this *MLogger) Close() {
+	this.out.Close()
 }
