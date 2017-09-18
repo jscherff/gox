@@ -44,6 +44,13 @@ func NewMLogger(prefix string, flags int, stdout, stderr bool, files ...string) 
 	return &MLogger{Logger: log.New(mw, prefix, flags), out: mw}
 }
 
+func LoggerFlag(fs []string) (lf int) {
+	for _, f := range fs {
+		lf |= LoggerFlags[f]
+	}
+	return lf
+}
+
 func (this *MLogger) AddFile(f string) error {
 	return this.out.AddFile(f)
 }
