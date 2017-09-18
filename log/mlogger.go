@@ -21,7 +21,7 @@ import (
 	`sync`
 )
 
-var LoggerFlags = map[string]int {
+var loggerFlags = map[string]int {
 	`utc`:		log.LUTC,
 	`date`:		log.Ldate,
 	`time`:		log.Ltime,
@@ -44,9 +44,9 @@ func NewMLogger(prefix string, flags int, stdout, stderr bool, files ...string) 
 	return &MLogger{Logger: log.New(mw, prefix, flags), out: mw}
 }
 
-func LoggerFlag(fs []string) (lf int) {
+func LoggerFlags(fs []string) (lf int) {
 	for _, f := range fs {
-		lf |= LoggerFlags[f]
+		lf |= loggerFlags[f]
 	}
 	return lf
 }

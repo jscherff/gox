@@ -1,6 +1,14 @@
 package main
-import "github.com/jscherff/gox/log"
+
+import (
+	"fmt"
+	"github.com/jscherff/gox/log"
+)
+
 func main() {
+
+	fmt.Println(log.LoggerFlags([]string{"date","time","shortfile"}))
+	fmt.Println(log.LstdFlags|log.Lshortfile)
 	//ml := log.NewMLogger("test", log.LstdFlags, true, false, "test1.log", "test2.log")
 	ml := log.NewMLogger("test", log.LstdFlags, true, false, "test1.log", "test2.log")
 	ml.Println("This is a test")
