@@ -21,6 +21,15 @@ import (
 	`sync`
 )
 
+const (
+        LUTC =		log.LUTC
+        Ldate =		log.Ldate
+        Ltime =		log.Ltime
+        Llongfile =	log.Llongfile
+        Lshortfile =	log.Lshortfile
+        LstdFlags =	log.LstdFlags
+)
+
 var loggerFlags = map[string]int {
 	`utc`:		log.LUTC,
 	`date`:		log.Ldate,
@@ -45,9 +54,11 @@ func NewMLogger(prefix string, flags int, stdout, stderr bool, files ...string) 
 }
 
 func LoggerFlags(fs ...string) (lf int) {
+
 	for _, f := range fs {
 		lf |= loggerFlags[f]
 	}
+
 	return lf
 }
 
@@ -59,26 +70,22 @@ func (this *MLogger) AddWriter(w io.Writer) {
 	this.out.AddWriter(w)
 }
 
-func (this *MLogger) SetStdout(b bool) {
-	this.out.SetStdout(b)
-}
-
-func (this *MLogger) SetStderr(b bool) {
-	this.out.SetStderr(b)
-}
-
 func (this *MLogger) SetPrefix(p string) {
 	this.Logger.SetPrefix(strings.TrimSpace(p) + ` `)
 }
 
 func (this *MLogger) Write(b []byte) (n int, err error) {
+
 	this.mu.Lock()
 	defer this.mu.Unlock()
+
 	this.buf = this.buf[:0]
 	this.buf = append(this.buf, b...)
+
 	if len(b) == 0 || b[len(b)-1] != '\n' {
 		this.buf = append(this.buf, '\n')
 	}
+
 	return this.out.Write(this.buf)
 }
 

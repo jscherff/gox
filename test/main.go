@@ -7,7 +7,8 @@ import (
 
 func main() {
 
-	fmt.Println(log.LoggerFlags([]string{"date","time","shortfile"}))
+	fmt.Println(log.LoggerFlags("date","time","shortfile"))
+	fmt.Println(log.LoggerFlags())
 	fmt.Println(log.LstdFlags|log.Lshortfile)
 	//ml := log.NewMLogger("test", log.LstdFlags, true, false, "test1.log", "test2.log")
 	ml := log.NewMLogger("test", log.LstdFlags, true, false, "test1.log", "test2.log")

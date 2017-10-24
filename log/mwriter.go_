@@ -16,6 +16,7 @@ package log
 
 import (
 	`io`
+	`io/ioutil`
 	`log`
 	`os`
 	`sync`
@@ -43,6 +44,13 @@ func NewMWriter(stdout, stderr bool, files ...string) *MWriter {
 			f = append(f, fh)
 		}
 	}
+	func MkdirOpen(fn string) (*os.File, error) {
+        if err := os.MkdirAll(filepath.Dir(fn), DirModeDefault); err != nil {
+                return nil, err
+        }
+        return os.OpenFile(fn, FileFlagsAppend, FileModeDefault)
+}
+
 
 	this := new(MWriter)
 
@@ -117,6 +125,9 @@ func (this *MWriter) refresh() {
 	for _, f := range this.files {
 		f.Sync()
 		writers = append(writers, f)
+	}
+	if len(writers) == 0 {
+		writers = append(writers, ioutil.Discard)
 	}
 	this.out = io.MultiWriter(writers...)
 }

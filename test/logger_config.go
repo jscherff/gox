@@ -1,7 +1,7 @@
 type Logger struct {
 	*MLogger
 	LogFile string
-	LoggerFlags int
+	LogFlags []string
 	Stdout bool
 	Stderr bool
 }
