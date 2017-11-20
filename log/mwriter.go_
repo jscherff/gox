@@ -19,81 +19,65 @@ import (
 	`io/ioutil`
 	`log`
 	`os`
+	`path/filepath`
 	`sync`
-	`github.com/jscherff/goutil`
+)
+
+const (
+	FileFlagsAppend = os.O_APPEND|os.O_CREATE|os.O_WRONLY
+	FileNameStdout = `/dev/stdout`
+	FileNameStderr = `/dev/stderr`
+	FileModeDefault = 0640
+	DirModeDefault = 0750
 )
 
 type MWriter struct {
 	out	io.Writer
-	buf	[]byte
 	writers	[]io.Writer
-	files	[]*os.File
-	stdout	bool
-	stderr	bool
 	mu	sync.Mutex
 }
 
 func NewMWriter(stdout, stderr bool, files ...string) *MWriter {
 
-	var f []*os.File
+	var writers []io.Writer
 
 	for _, fn := range files {
-		if fh, err := goutil.MkdirOpen(fn); err != nil {
+		if fh, err := createOrAppendFile(fn); err != nil {
 			log.Println(err)
 		} else {
-			f = append(f, fh)
+			writers = append(writers, fh)
 		}
 	}
-	func MkdirOpen(fn string) (*os.File, error) {
-        if err := os.MkdirAll(filepath.Dir(fn), DirModeDefault); err != nil {
-                return nil, err
-        }
-        return os.OpenFile(fn, FileFlagsAppend, FileModeDefault)
-}
+	if stdout {
+		writers = append(writers, os.Stdout)
+	}
+	if stderr {
+		writers = append(writers, os.Stderr)
+	}
 
-
-	this := new(MWriter)
-
-	this.mu.Lock()
-	defer this.mu.Unlock()
-
-	this.files = f
-	this.stdout = stdout
-	this.stderr = stderr
-	this.refresh()
+	this := &MWriter{writers: writers}
+	this.reset()
 
 	return this
 }
 
-func (this *MWriter) AddFile(f string) (err error) {
+func (this *MWriter) AddFile(fn string) (error) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
-	if fh, err := goutil.MkdirOpen(f); err == nil {
-		this.files = append(this.files, fh)
-		this.refresh()
+	if fh, err := createOrAppendFile(fn); err != nil {
+		return err
+	} else {
+		this.writers = append(this.writers, fh)
 	}
-	return err
+	this.reset()
+	return nil
 }
 
 func (this *MWriter) AddWriter(w io.Writer) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
 	this.writers = append(this.writers, w)
-	this.refresh()
-}
-
-func (this *MWriter) SetStdout(b bool) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	this.stdout = b
-	this.refresh()
-}
-
-func (this *MWriter) SetStderr(b bool) {
-	this.mu.Lock()
-	defer this.mu.Unlock()
-	this.stderr = b
-	this.refresh()
+	this.reset()
 }
 
 func (this *MWriter) Write(b []byte) (int, error) {
@@ -103,31 +87,44 @@ func (this *MWriter) Write(b []byte) (int, error) {
 }
 
 func (this *MWriter) Close() {
+
 	this.mu.Lock()
 	defer this.mu.Unlock()
-	for _, f := range this.files {
-		f.Sync()
-		f.Close()
+
+	for _, writer := range this.writers {
+
+		if w, ok := writer.(*os.File); ok {
+			w.Sync()
+			if w.Name() == `/dev/stdout` || w.Name() == `/dev/stderr` {
+				continue
+			}
+			w.Close()
+		}
 	}
 }
 
-func (this *MWriter) refresh() {
+func (this *MWriter) reset() {
+
 	var writers []io.Writer
-	if this.stdout {
-		writers = append(writers, os.Stdout)
+
+	for _, writer := range this.writers {
+
+		if w, ok := writer.(*os.File); ok {
+			w.Sync()
+		}
+		writers = append(writers, writer)
 	}
-	if this.stderr {
-		writers = append(writers, os.Stderr)
-	}
-	for _, w := range this.writers {
-		writers = append(writers, w)
-	}
-	for _, f := range this.files {
-		f.Sync()
-		writers = append(writers, f)
-	}
+
 	if len(writers) == 0 {
 		writers = append(writers, ioutil.Discard)
 	}
+
 	this.out = io.MultiWriter(writers...)
+}
+
+func createOrAppendFile(fn string) (*os.File, error) {
+	if err := os.MkdirAll(filepath.Dir(fn), DirModeDefault); err != nil {
+		return nil, err
+	}
+	return os.OpenFile(fn, FileFlagsAppend, FileModeDefault)
 }

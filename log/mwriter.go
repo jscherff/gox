@@ -31,13 +31,20 @@ const (
 	DirModeDefault = 0750
 )
 
-type MWriter struct {
+type MWriter interface {
+	io.Writer
+	AddFile(fn string) (error)
+	AddWriter(io.Writer)
+	Close()
+}
+
+type mWriter struct {
 	out	io.Writer
 	writers	[]io.Writer
 	mu	sync.Mutex
 }
 
-func NewMWriter(stdout, stderr bool, files ...string) *MWriter {
+func NewMWriter(stdout, stderr bool, files ...string) MWriter {
 
 	var writers []io.Writer
 
@@ -55,13 +62,13 @@ func NewMWriter(stdout, stderr bool, files ...string) *MWriter {
 		writers = append(writers, os.Stderr)
 	}
 
-	this := &MWriter{writers: writers}
+	this := &mWriter{writers: writers}
 	this.reset()
 
 	return this
 }
 
-func (this *MWriter) AddFile(fn string) (error) {
+func (this *mWriter) AddFile(fn string) (error) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
 	if fh, err := createOrAppendFile(fn); err != nil {
@@ -73,20 +80,20 @@ func (this *MWriter) AddFile(fn string) (error) {
 	return nil
 }
 
-func (this *MWriter) AddWriter(w io.Writer) {
+func (this *mWriter) AddWriter(w io.Writer) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
 	this.writers = append(this.writers, w)
 	this.reset()
 }
 
-func (this *MWriter) Write(b []byte) (int, error) {
+func (this *mWriter) Write(b []byte) (int, error) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
 	return this.out.Write(b)
 }
 
-func (this *MWriter) Close() {
+func (this *mWriter) Close() {
 
 	this.mu.Lock()
 	defer this.mu.Unlock()
@@ -103,7 +110,7 @@ func (this *MWriter) Close() {
 	}
 }
 
-func (this *MWriter) reset() {
+func (this *mWriter) reset() {
 
 	var writers []io.Writer
 

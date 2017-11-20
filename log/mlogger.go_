@@ -39,42 +39,18 @@ var loggerFlags = map[string]int {
 	`standard`:	log.LstdFlags,
 }
 
-type MLogger interface {
-
-	Fatal(...interface{})
-	Fatalf(string, ...interface{})
-	Fatalln(...interface{})
-	Flags() int
-	Output(int, string) error
-	Panic(...interface{})
-	Panicf(string, ...interface{})
-	Panicln(...interface{})
-	Prefix() string
-	Print(...interface{})
-	Printf(string, ...interface{})
-	Println(...interface{})
-	SetFlags(int)
-	SetOutput(io.Writer)
-	SetPrefix(string)
-
-	AddFile(string) (error)
-	AddWriter(io.Writer)
-	Write([]byte) (int, error)
-	Close()
-}
-
-type mLogger struct {
+type MLogger struct {
 	*log.Logger
-	out	MWriter
+	out	*MWriter
 	buf	[]byte
 	mu	sync.Mutex
 }
 
-func NewMLogger(prefix string, flags int, stdout, stderr bool, files ...string) MLogger {
+func NewMLogger(prefix string, flags int, stdout, stderr bool, files ...string) *MLogger {
 
 	mw := NewMWriter(stdout, stderr, files...)
 	prefix = strings.TrimSpace(prefix) + ` `
-	return &mLogger{Logger: log.New(mw, prefix, flags), out: mw}
+	return &MLogger{Logger: log.New(mw, prefix, flags), out: mw}
 }
 
 func LoggerFlags(fs ...string) (lf int) {
@@ -86,19 +62,19 @@ func LoggerFlags(fs ...string) (lf int) {
 	return lf
 }
 
-func (this *mLogger) AddFile(f string) error {
+func (this *MLogger) AddFile(f string) error {
 	return this.out.AddFile(f)
 }
 
-func (this *mLogger) AddWriter(w io.Writer) {
+func (this *MLogger) AddWriter(w io.Writer) {
 	this.out.AddWriter(w)
 }
 
-func (this *mLogger) SetPrefix(p string) {
+func (this *MLogger) SetPrefix(p string) {
 	this.Logger.SetPrefix(strings.TrimSpace(p) + ` `)
 }
 
-func (this *mLogger) Write(b []byte) (n int, err error) {
+func (this *MLogger) Write(b []byte) (n int, err error) {
 
 	this.mu.Lock()
 	defer this.mu.Unlock()
@@ -113,6 +89,6 @@ func (this *mLogger) Write(b []byte) (n int, err error) {
 	return this.out.Write(this.buf)
 }
 
-func (this *mLogger) Close() {
+func (this *MLogger) Close() {
 	this.out.Close()
 }
